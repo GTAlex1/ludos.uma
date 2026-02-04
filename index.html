@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ludópatas.uma - Física AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <div id="mainView">
+        <div style="text-align: right;">
+            <button id="btnConfig" class="btn-config">⚙️ Configurar API</button>
+        </div>
+
+        <h1>Calculadora física</h1>
+        <p class="tagline">Dime tu problema a calcular</p>
+        
+        <div class="input-group">
+            <textarea id="enunciado" placeholder="Diseñado para: agamer40, Fi, Froba, pendejo no dura nada y Pepe &#10&#10&#10&#10&#10Por Saint-Saënz"></textarea>
+        </div>
+
+        <div class="input-group">
+            <label for="foto" class="custom-file-upload">
+                📷 Adjuntar imagen del problema
+            </label>
+            <input type="file" id="foto" accept="image/*">
+            <div class="preview-container">
+                <img id="preview" src="#" alt="Vista previa">
+            </div>
+        </div>
+
+        <button id="btnResolver">Resolver Problema</button>
+
+        <div id="resultado" class="result-box">
+            <h3>Solución:</h3>
+            <div id="textoResultado">Esperando enunciado...</div>
+        </div>
+    </div>
+
+    <div id="configMode" style="display: none; text-align: center;">
+        <h1>Configuración Privada</h1>
+        <p class="tagline">Introduce tu API Key. Se almacenará de forma segura en este dispositivo durante 7 días.</p>
+        
+        <div class="input-group">
+            <textarea id="apiInput" placeholder="Pega aquí tu Gemini API Key..." style="height: 100px;"></textarea>
+        </div>
+        
+        <button id="btnGuardarConfig">Guardar y Volver</button>
+        <p id="statusKey" style="margin-top: 15px; font-size: 0.8rem; color: #00adb5;"></p>
+    </div>
+</div>
+
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script type="module" src="script.js"></script>
+</body>
+</html>

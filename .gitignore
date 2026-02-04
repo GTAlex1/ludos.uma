@@ -1,0 +1,20 @@
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Logs de errores
+*.log
+npm-debug.log*
+
+# Carpetas de dependencias (por si acaso usas Node en el futuro)
+node_modules/
+dist/
+
+# Archivos de configuración local o claves que podrías crear por error
+.env
+api_key.txt
+config.json
+
+# Carpetas de editores
+.vscode/
+.idea/
