@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-// Selectores
+// Selectores de la interfaz
 const mainView = document.getElementById('mainView');
 const configMode = document.getElementById('configMode');
 const btnConfig = document.getElementById('btnConfig');
@@ -10,17 +10,23 @@ const btnResolver = document.getElementById('btnResolver');
 const textoResultado = document.getElementById('textoResultado');
 const resultBox = document.getElementById('resultado');
 
-// --- LÓGICA DE 7 DÍAS ---
+// --- LÓGICA DE PERSISTENCIA (7 DÍAS) ---
 
+/**
+ * Guarda la clave con una marca de tiempo de expiración.
+ */
 function guardarApiKey(key) {
     const ahora = new Date();
     const item = {
         value: key,
-        expiry: ahora.getTime() + (7 * 24 * 60 * 60 * 1000) // 7 días
+        expiry: ahora.getTime() + (7 * 24 * 60 * 60 * 1000) // Calcula 7 días en ms
     };
     localStorage.setItem('ludopatas_key_secure', JSON.stringify(item));
 }
 
+/**
+ * Recupera la clave y verifica si ha caducado.
+ */
 function obtenerApiKey() {
     const itemStr = localStorage.getItem('ludopatas_key_secure');
     if (!itemStr) return null;
@@ -28,6 +34,7 @@ function obtenerApiKey() {
     const item = JSON.parse(itemStr);
     const ahora = new Date();
 
+    // Si el tiempo actual superó la expiración, borra y retorna null
     if (ahora.getTime() > item.expiry) {
         localStorage.removeItem('ludopatas_key_secure');
         return null;
@@ -35,7 +42,7 @@ function obtenerApiKey() {
     return item.value;
 }
 
-// --- NAVEGACIÓN ---
+// --- NAVEGACIÓN ENTRE PANTALLAS ---
 
 btnConfig.addEventListener('click', () => {
     mainView.style.display = 'none';
@@ -51,13 +58,13 @@ btnGuardarConfig.addEventListener('click', () => {
     if (key) {
         guardarApiKey(key);
         alert("Clave configurada correctamente por 7 días.");
-        location.reload(); // Recarga para volver a la pantalla principal
+        location.reload(); // Vuelve a la pantalla principal
     } else {
         alert("Por favor, introduce una clave válida.");
     }
 });
 
-// --- LÓGICA DE FÍSICA ---
+// --- PROCESAMIENTO DE IMÁGENES ---
 
 async function fileToPart(file) {
     const base64 = await new Promise(r => {
@@ -67,6 +74,8 @@ async function fileToPart(file) {
     });
     return { inlineData: { data: base64, mimeType: file.type } };
 }
+
+// --- LÓGICA PRINCIPAL DE RESOLUCIÓN ---
 
 btnResolver.addEventListener('click', async () => {
     const API_KEY = obtenerApiKey();
@@ -80,6 +89,7 @@ btnResolver.addEventListener('click', async () => {
 
     if (!promptText && !file) return alert("Escribe un problema o sube una foto.");
 
+    // Estado de carga
     btnResolver.disabled = true;
     btnResolver.innerText = "Consultando a la UMA...";
     resultBox.style.display = 'block';
@@ -87,18 +97,30 @@ btnResolver.addEventListener('click', async () => {
 
     try {
         const genAI = new GoogleGenerativeAI(API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        // CORRECCIÓN PARA ERROR 404: Forzamos el uso de la versión "v1"
+        const model = genAI.getGenerativeModel(
+            { model: "gemini-1.5-flash" },
+            { apiVersion: "v1" }
+        );
 
         const instruction = "Eres un profesor de física experto. Resuelve paso a paso. Usa LaTeX para TODAS las fórmulas ($$ formula $$).";
         const parts = [instruction + "\n" + promptText];
         
-        if (file) parts.push(await fileToPart(file));
+        if (file) {
+            parts.push(await fileToPart(file));
+        }
 
         const result = await model.generateContent(parts);
         const response = await result.response;
         
+        // Formatear respuesta con saltos de línea HTML
         textoResultado.innerHTML = response.text().replace(/\n/g, '<br>');
-        if (window.MathJax) MathJax.typeset();
+        
+        // Renderizar ecuaciones matemáticas con MathJax
+        if (window.MathJax) {
+            MathJax.typeset();
+        }
 
     } catch (e) {
         textoResultado.innerText = "Error: " + e.message;
@@ -108,7 +130,7 @@ btnResolver.addEventListener('click', async () => {
     }
 });
 
-// Vista previa imagen
+// Vista previa de imagen seleccionada
 document.getElementById('foto').addEventListener('change', function() {
     const file = this.files[0];
     if (file) {
