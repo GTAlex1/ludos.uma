@@ -70,15 +70,10 @@ async function fileToPart(file) {
 
 btnResolver.addEventListener('click', async () => {
     const API_KEY = obtenerApiKey();
-    if (!API_KEY) {
-        alert("⚠️ Configura la API Key en el icono ⚙️.");
-        return;
-    }
+    if (!API_KEY) return alert("Configura la API Key primero.");
 
     const promptText = document.getElementById('enunciado').value.trim();
     const file = document.getElementById('foto').files[0];
-
-    if (!promptText && !file) return alert("Escribe algo o sube una foto.");
 
     btnResolver.disabled = true;
     btnResolver.innerText = "Consultando...";
@@ -86,38 +81,36 @@ btnResolver.addEventListener('click', async () => {
     textoResultado.innerText = "Pensando...";
 
     try {
-        const genAI = new GoogleGenerativeAI(API_KEY);
-        // Usamos v1beta y el nombre del modelo con -latest para máxima compatibilidad
-        const model = genAI.getGenerativeModel(
-            { model: "gemini-1.5-flash-latest" },
-            { apiVersion: "v1beta" }
-        );
+        let parts = [{ text: "Actúa como profesor de física. Resuelve paso a paso. Usa LaTeX ($$):\n" + promptText }];
 
-        // Preparamos los "parts" como objetos de texto/imagen
-        const instruction = "Actúa como profesor de física. Resuelve paso a paso. Usa LaTeX con $$ para fórmulas.";
-        let parts = [
-            { text: instruction + "\n\nEnunciado: " + promptText }
-        ];
-        
         if (file) {
-            const imageData = await fileToPart(file);
-            // El imageData ya devuelve el objeto { inlineData: {...} }
-            parts.push(imageData);
+            const base64 = await new Promise(r => {
+                const reader = new FileReader();
+                reader.onload = () => r(reader.result.split(',')[1]);
+                reader.readAsDataURL(file);
+            });
+            parts.push({ inline_data: { mime_type: file.type, data: base64 } });
         }
 
-        // Llamada a la IA
-        const result = await model.generateContent({ contents: [{ role: "user", parts: parts }] });
-        const response = await result.response;
+        // CAMBIO AQUÍ: Usamos gemini-2.0-flash que está en tu lista (índice 2)
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: parts }] })
+        });
+
+        const data = await response.json();
+
+        if (data.error) throw new Error(data.error.message);
+
+        // Extraemos la respuesta (la estructura de Gemini 2.0 es igual)
+        const respuestaIA = data.candidates[0].content.parts[0].text;
+        textoResultado.innerHTML = respuestaIA.replace(/\n/g, '<br>');
         
-        textoResultado.innerHTML = response.text().replace(/\n/g, '<br>');
-        
-        if (window.MathJax) {
-            MathJax.typesetPromise();
-        }
+        if (window.MathJax) MathJax.typesetPromise();
 
     } catch (e) {
-        console.error(e);
-        textoResultado.innerText = "Error crítico: " + e.message;
+        textoResultado.innerText = "Error: " + e.message;
     } finally {
         btnResolver.disabled = false;
         btnResolver.innerText = "Resolver Problema";
