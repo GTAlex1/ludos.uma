@@ -12,29 +12,20 @@ const resultBox = document.getElementById('resultado');
 
 // --- LÓGICA DE PERSISTENCIA (7 DÍAS) ---
 
-/**
- * Guarda la clave con una marca de tiempo de expiración.
- */
 function guardarApiKey(key) {
     const ahora = new Date();
     const item = {
         value: key,
-        expiry: ahora.getTime() + (7 * 24 * 60 * 60 * 1000) // Calcula 7 días en ms
+        expiry: ahora.getTime() + (7 * 24 * 60 * 60 * 1000) 
     };
     localStorage.setItem('ludopatas_key_secure', JSON.stringify(item));
 }
 
-/**
- * Recupera la clave y verifica si ha caducado.
- */
 function obtenerApiKey() {
     const itemStr = localStorage.getItem('ludopatas_key_secure');
     if (!itemStr) return null;
-
     const item = JSON.parse(itemStr);
     const ahora = new Date();
-
-    // Si el tiempo actual superó la expiración, borra y retorna null
     if (ahora.getTime() > item.expiry) {
         localStorage.removeItem('ludopatas_key_secure');
         return null;
@@ -42,7 +33,7 @@ function obtenerApiKey() {
     return item.value;
 }
 
-// --- NAVEGACIÓN ENTRE PANTALLAS ---
+// --- NAVEGACIÓN ---
 
 btnConfig.addEventListener('click', () => {
     mainView.style.display = 'none';
@@ -58,7 +49,7 @@ btnGuardarConfig.addEventListener('click', () => {
     if (key) {
         guardarApiKey(key);
         alert("Clave configurada correctamente por 7 días.");
-        location.reload(); // Vuelve a la pantalla principal
+        location.reload(); 
     } else {
         alert("Por favor, introduce una clave válida.");
     }
@@ -75,7 +66,7 @@ async function fileToPart(file) {
     return { inlineData: { data: base64, mimeType: file.type } };
 }
 
-// --- LÓGICA PRINCIPAL DE RESOLUCIÓN ---
+// --- LÓGICA DE RESOLUCIÓN ---
 
 btnResolver.addEventListener('click', async () => {
     const API_KEY = obtenerApiKey();
@@ -89,7 +80,6 @@ btnResolver.addEventListener('click', async () => {
 
     if (!promptText && !file) return alert("Escribe un problema o sube una foto.");
 
-    // Estado de carga
     btnResolver.disabled = true;
     btnResolver.innerText = "Consultando a la UMA...";
     resultBox.style.display = 'block';
@@ -98,48 +88,19 @@ btnResolver.addEventListener('click', async () => {
     try {
         const genAI = new GoogleGenerativeAI(API_KEY);
         
-        // CORRECCIÓN PARA ERROR 404: Forzamos el uso de la versión "v1"
+        // CAMBIO CLAVE: Usamos v1beta para asegurar compatibilidad con gemini-1.5-flash
         const model = genAI.getGenerativeModel(
             { model: "gemini-1.5-flash" },
-            { apiVersion: "v1" }
+            { apiVersion: "v1beta" } 
         );
 
         const instruction = "Eres un profesor de física experto. Resuelve paso a paso. Usa LaTeX para TODAS las fórmulas ($$ formula $$).";
-        const parts = [instruction + "\n" + promptText];
+        const parts = [];
         
+        // Si hay imagen, la añadimos primero para que la IA la vea antes del texto
         if (file) {
             parts.push(await fileToPart(file));
         }
+        parts.push(instruction + "\nEnunciado: " + promptText);
 
-        const result = await model.generateContent(parts);
-        const response = await result.response;
-        
-        // Formatear respuesta con saltos de línea HTML
-        textoResultado.innerHTML = response.text().replace(/\n/g, '<br>');
-        
-        // Renderizar ecuaciones matemáticas con MathJax
-        if (window.MathJax) {
-            MathJax.typeset();
-        }
-
-    } catch (e) {
-        textoResultado.innerText = "Error: " + e.message;
-    } finally {
-        btnResolver.disabled = false;
-        btnResolver.innerText = "Resolver Problema";
-    }
-});
-
-// Vista previa de imagen seleccionada
-document.getElementById('foto').addEventListener('change', function() {
-    const file = this.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => { 
-            const p = document.getElementById('preview');
-            p.src = e.target.result; 
-            p.style.display = 'block'; 
-        };
-        reader.readAsDataURL(file);
-    }
-});
+        const result = await model.
