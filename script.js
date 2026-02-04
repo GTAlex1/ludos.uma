@@ -71,36 +71,55 @@ async function fileToPart(file) {
 btnResolver.addEventListener('click', async () => {
     const API_KEY = obtenerApiKey();
     if (!API_KEY) {
-        alert("⚠️ No hay una API Key activa o ha caducado. Configúrala en el icono ⚙️.");
+        alert("⚠️ Configura la API Key en el icono ⚙️.");
         return;
     }
 
     const promptText = document.getElementById('enunciado').value.trim();
     const file = document.getElementById('foto').files[0];
 
-    if (!promptText && !file) return alert("Escribe un problema o sube una foto.");
+    if (!promptText && !file) return alert("Escribe algo o sube una foto.");
 
     btnResolver.disabled = true;
-    btnResolver.innerText = "Consultando a la UMA...";
+    btnResolver.innerText = "Consultando...";
     resultBox.style.display = 'block';
-    textoResultado.innerText = "Analizando el problema...";
+    textoResultado.innerText = "Pensando...";
 
     try {
         const genAI = new GoogleGenerativeAI(API_KEY);
-        
-        // CAMBIO CLAVE: Usamos v1beta para asegurar compatibilidad con gemini-1.5-flash
+        // Usamos v1beta y el nombre del modelo con -latest para máxima compatibilidad
         const model = genAI.getGenerativeModel(
-            { model: "gemini-1.5-flash" },
-            { apiVersion: "v1beta" } 
+            { model: "gemini-1.5-flash-latest" },
+            { apiVersion: "v1beta" }
         );
 
-        const instruction = "Eres un profesor de física experto. Resuelve paso a paso. Usa LaTeX para TODAS las fórmulas ($$ formula $$).";
-        const parts = [];
+        // Preparamos los "parts" como objetos de texto/imagen
+        const instruction = "Actúa como profesor de física. Resuelve paso a paso. Usa LaTeX con $$ para fórmulas.";
+        let parts = [
+            { text: instruction + "\n\nEnunciado: " + promptText }
+        ];
         
-        // Si hay imagen, la añadimos primero para que la IA la vea antes del texto
         if (file) {
-            parts.push(await fileToPart(file));
+            const imageData = await fileToPart(file);
+            // El imageData ya devuelve el objeto { inlineData: {...} }
+            parts.push(imageData);
         }
-        parts.push(instruction + "\nEnunciado: " + promptText);
 
-        const result = await model.
+        // Llamada a la IA
+        const result = await model.generateContent({ contents: [{ role: "user", parts: parts }] });
+        const response = await result.response;
+        
+        textoResultado.innerHTML = response.text().replace(/\n/g, '<br>');
+        
+        if (window.MathJax) {
+            MathJax.typesetPromise();
+        }
+
+    } catch (e) {
+        console.error(e);
+        textoResultado.innerText = "Error crítico: " + e.message;
+    } finally {
+        btnResolver.disabled = false;
+        btnResolver.innerText = "Resolver Problema";
+    }
+});
