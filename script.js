@@ -82,8 +82,8 @@ btnResolver.addEventListener('click', async () => {
             });
         }
 
-        // Llamada directa al modelo Gemini 2.0 Flash (confirmado en tu ListModels)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
+        // Usamos el modelo 2.5 que tienes ilimitado
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
